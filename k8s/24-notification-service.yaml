@@ -1,0 +1,47 @@
+# Build & load the Python image first:
+#   docker build -t ordersys-notification:latest ./services/notification-service
+#   kind load docker-image ordersys-notification:latest
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: ordersys
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: notification-service }
+  template:
+    metadata:
+      labels: { app: notification-service }
+    spec:
+      containers:
+        - name: notification-service
+          image: ordersys-notification:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef: { name: ordersys-config }
+          env:
+            - name: NOTIFICATION_PORT
+              value: "4005"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: ordersys-secrets, key: POSTGRES_PASSWORD }
+            - name: NOTIFICATION_DATABASE_URL
+              value: postgresql://postgres:$(POSTGRES_PASSWORD)@postgres:5432/notification_db
+          ports: [{ containerPort: 4005 }]
+          readinessProbe:
+            httpGet: { path: /healthz, port: 4005 }
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 300m, memory: 384Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: ordersys
+spec:
+  selector: { app: notification-service }
+  ports: [{ port: 4005, targetPort: 4005 }]

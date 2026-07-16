@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+  namespace: ordersys
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: inventory-service }
+  template:
+    metadata:
+      labels: { app: inventory-service }
+    spec:
+      containers:
+        - name: inventory-service
+          image: ordersys:latest
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "pnpm --filter @ordersys/inventory-service run db:push && pnpm dev:inventory"]
+          envFrom:
+            - configMapRef: { name: ordersys-config }
+          env:
+            - name: SERVICE_NAME
+              value: inventory-service
+            - name: INVENTORY_PORT
+              value: "4002"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: ordersys-secrets, key: POSTGRES_PASSWORD }
+            - name: INVENTORY_DATABASE_URL
+              value: postgresql://postgres:$(POSTGRES_PASSWORD)@postgres:5432/inventory_db
+          ports: [{ containerPort: 4002 }]
+          readinessProbe:
+            httpGet: { path: /healthz, port: 4002 }
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 100m, memory: 160Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  namespace: ordersys
+spec:
+  selector: { app: inventory-service }
+  ports: [{ port: 4002, targetPort: 4002 }]

@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: order-service
+    static_configs: [{ targets: ["order-service:4001"], labels: { service: order-service } }]
+  - job_name: inventory-service
+    static_configs: [{ targets: ["inventory-service:4002"], labels: { service: inventory-service } }]
+  - job_name: payment-service
+    static_configs: [{ targets: ["payment-service:4003"], labels: { service: payment-service } }]
+  - job_name: shipping-service
+    static_configs: [{ targets: ["shipping-service:4004"], labels: { service: shipping-service } }]
+  - job_name: notification-service
+    static_configs: [{ targets: ["notification-service:4005"], labels: { service: notification-service } }]

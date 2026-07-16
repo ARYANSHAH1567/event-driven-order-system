@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Calm, editorial palette. Dark is the default first impression; light mode
+ * follows the OS preference. Warm neutrals (not pure grey) + one muted accent.
+ */
+:root {
+  --bg: #0f0f11;
+  --bg-elevated: #17171a;
+  --bg-inset: #0b0b0d;
+  --border: #26262b;
+  --border-strong: #35353c;
+  --text: #ededf0;
+  --text-muted: #a1a1aa;
+  --text-faint: #6b6b73;
+
+  --accent: #4f9d69; /* muted forest green */
+  --success: #4f9d69;
+  --warning: #c9973f;
+  --danger: #c0564b;
+  --info: #6b8fc0;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #fafaf9;
+    --bg-elevated: #ffffff;
+    --bg-inset: #f1f0ee;
+    --border: #e7e5e4;
+    --border-strong: #d6d3d1;
+    --text: #1c1c1e;
+    --text-muted: #57575c;
+    --text-faint: #8a8a90;
+
+    --accent: #3f7d54;
+    --success: #3f7d54;
+    --warning: #a9762a;
+    --danger: #a8443a;
+    --info: #4a6fa5;
+  }
+}
+
+html {
+  color-scheme: dark light;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Thin, restrained scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* Selection uses the accent, softly. */
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}

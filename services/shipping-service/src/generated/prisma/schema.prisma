@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("SHIPPING_DATABASE_URL")
+}
+
+enum ShipmentStatus {
+  CREATED
+  DISPATCHED
+  DELIVERED
+}
+
+model Shipment {
+  id             String         @id @default(uuid())
+  orderId        String         @unique
+  status         ShipmentStatus @default(CREATED)
+  trackingNumber String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@map("shipments")
+}
+
+model ProcessedMessage {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+
+  @@map("processed_messages")
+}

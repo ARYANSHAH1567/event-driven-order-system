@@ -1,0 +1,72 @@
+# Build & load the image first (see k8s/README.md):
+#   docker build -t ordersys:latest .
+#   kind load docker-image ordersys:latest
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: ordersys
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: order-service }
+  template:
+    metadata:
+      labels: { app: order-service }
+    spec:
+      containers:
+        - name: order-service
+          image: ordersys:latest
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "pnpm --filter @ordersys/order-service run db:push && pnpm dev:order"]
+          envFrom:
+            - configMapRef: { name: ordersys-config }
+          env:
+            - name: SERVICE_NAME
+              value: order-service
+            - name: ORDER_PORT
+              value: "4001"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: ordersys-secrets, key: POSTGRES_PASSWORD }
+            - name: ORDER_DATABASE_URL
+              value: postgresql://postgres:$(POSTGRES_PASSWORD)@postgres:5432/order_db
+          ports: [{ containerPort: 4001 }]
+          readinessProbe:
+            httpGet: { path: /healthz, port: 4001 }
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: 4001 }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 160Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: ordersys
+spec:
+  selector: { app: order-service }
+  ports: [{ port: 4001, targetPort: 4001 }]
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: order-service
+  namespace: ordersys
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: order-service
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 70 }

@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ordersys
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ordersys-config
+  namespace: ordersys
+data:
+  RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+  RABBITMQ_MGMT_URL: http://rabbitmq:15672
+  REDIS_URL: redis://redis:6379
+  INVENTORY_URL: http://inventory-service:4002
+  PAYMENT_URL: http://payment-service:4003
+  SHIPPING_URL: http://shipping-service:4004
+  NOTIFICATION_URL: http://notification-service:4005
+  LOG_LEVEL: info
+  NODE_ENV: production
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ordersys-secrets
+  namespace: ordersys
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: postgres
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: ordersys
+data:
+  init.sql: |
+    CREATE DATABASE order_db;
+    CREATE DATABASE inventory_db;
+    CREATE DATABASE payment_db;
+    CREATE DATABASE shipping_db;
+    CREATE DATABASE notification_db;

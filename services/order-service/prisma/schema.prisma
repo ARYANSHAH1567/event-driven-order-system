@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("ORDER_DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  SHIPPED
+  DELIVERED
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  customerId  String
+  status      OrderStatus @default(PENDING)
+  totalAmount Decimal     @db.Decimal(12, 2)
+  currency    String      @default("USD")
+  address     Json?
+
+  // Saga state — the Order service is the coordinator. It confirms only once
+  // BOTH of these are true; if either leg fails it drives compensation.
+  inventoryReserved Boolean @default(false)
+  paymentSucceeded  Boolean @default(false)
+
+  cancellationReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items  OrderItem[]
+  events OrderEvent[]
+
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String
+  sku       String
+  quantity  Int
+  unitPrice Decimal @db.Decimal(12, 2)
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+/// Append-only timeline of everything that happened to an order — this is both
+/// the audit log and the read model the dashboard renders.
+model OrderEvent {
+  id        String   @id @default(uuid())
+  orderId   String
+  type      String
+  producer  String
+  payload   Json
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_events")
+}
+
+/// Transactional outbox: events are written here in the SAME transaction as the
+/// state change that produced them, then a relay publishes them to RabbitMQ and
+/// flips `published`. This removes the dual-write problem (DB commit + publish
+/// can no longer diverge). The row id doubles as the message id for idempotency.
+model Outbox {
+  id            String   @id @default(uuid())
+  aggregateId   String
+  type          String
+  payload       Json
+  correlationId String
+  causationId   String?
+  published     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([published, createdAt])
+  @@map("outbox")
+}
+
+/// Idempotency ledger: a consumed message's id is recorded here so redelivery
+/// (at-least-once) is a no-op — at-least-once + idempotent consumer = effectively-once.
+model ProcessedMessage {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+
+  @@map("processed_messages")
+}

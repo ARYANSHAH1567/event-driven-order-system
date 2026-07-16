@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: ordersys
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: payment-service }
+  template:
+    metadata:
+      labels: { app: payment-service }
+    spec:
+      containers:
+        - name: payment-service
+          image: ordersys:latest
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "pnpm --filter @ordersys/payment-service run db:push && pnpm dev:payment"]
+          envFrom:
+            - configMapRef: { name: ordersys-config }
+          env:
+            - name: SERVICE_NAME
+              value: payment-service
+            - name: PAYMENT_PORT
+              value: "4003"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: ordersys-secrets, key: POSTGRES_PASSWORD }
+            - name: PAYMENT_DATABASE_URL
+              value: postgresql://postgres:$(POSTGRES_PASSWORD)@postgres:5432/payment_db
+          ports: [{ containerPort: 4003 }]
+          readinessProbe:
+            httpGet: { path: /healthz, port: 4003 }
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 100m, memory: 160Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: ordersys
+spec:
+  selector: { app: payment-service }
+  ports: [{ port: 4003, targetPort: 4003 }]

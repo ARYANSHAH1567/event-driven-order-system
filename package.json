@@ -1,0 +1,33 @@
+{
+  "name": "event-driven-order-system",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Distributed, event-driven order & fulfillment platform (saga, outbox, idempotency, DLQ)",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "infra:up": "docker compose up -d postgres rabbitmq redis",
+    "infra:down": "docker compose down",
+    "up": "docker compose up --build",
+    "down": "docker compose down -v",
+    "dev:order": "tsx watch services/order-service/src/index.ts",
+    "dev:inventory": "tsx watch services/inventory-service/src/index.ts",
+    "dev:payment": "tsx watch services/payment-service/src/index.ts",
+    "dev:shipping": "tsx watch services/shipping-service/src/index.ts",
+    "hello": "tsx scripts/hello-bus.ts",
+    "prisma:generate": "pnpm -r --filter \"./services/**\" run prisma:generate",
+    "prisma:migrate": "pnpm -r --filter \"./services/**\" run prisma:migrate",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@testcontainers/rabbitmq": "^10.16.0",
+    "@types/node": "^22.10.2",
+    "testcontainers": "^10.16.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

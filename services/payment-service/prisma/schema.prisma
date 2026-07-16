@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("PAYMENT_DATABASE_URL")
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id          String        @id @default(uuid())
+  orderId     String
+  amount      Decimal       @db.Decimal(12, 2)
+  status      PaymentStatus @default(PENDING)
+  providerRef String?
+  failureCode String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([orderId])
+  @@map("payments")
+}
+
+/// Idempotency ledger — see the same model in the order service.
+model ProcessedMessage {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+
+  @@map("processed_messages")
+}
